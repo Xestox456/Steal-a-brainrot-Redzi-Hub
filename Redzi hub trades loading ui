@@ -1,0 +1,298 @@
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+
+local THEME = {
+    Background = Color3.fromRGB(25, 26, 31),
+    Accent = Color3.fromRGB(51, 95, 255),
+    AccentDark = Color3.fromRGB(38, 61, 143),
+    Text = Color3.fromRGB(255, 255, 255),
+    SubText = Color3.fromRGB(200, 200, 200),
+    FontMain = Enum.Font.BuilderSansMedium,
+    FontBody = Enum.Font.BuilderSans,
+}
+
+local DISCORD_LINK = "we dont have a discord server yet"
+local IMAGE_URL = "https://raw.githubusercontent.com/hesiz/Images/refs/heads/main/sob.jpg"
+local IMAGE_FILE = "sob_icon.jpg"
+
+local function downloadImage()
+    if not isfile(IMAGE_FILE) then
+        local res = request({ Url = IMAGE_URL, Method = "GET" })
+        if res and res.StatusCode == 200 then
+            writefile(IMAGE_FILE, res.Body)
+        end
+    end
+    return getcustomasset(IMAGE_FILE)
+end
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ActivarLoadingUI"
+screenGui.Parent = CoreGui
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.DisplayOrder = 999999999
+screenGui.IgnoreGuiInset = true
+
+local activateBtn = Instance.new("TextButton")
+activateBtn.Name = "ActivateButton"
+activateBtn.Size = UDim2.new(0, 200, 0, 50)
+activateBtn.Position = UDim2.new(0.5, -100, 0.85, 0)
+activateBtn.BackgroundColor3 = THEME.Background
+activateBtn.TextColor3 = THEME.Text
+activateBtn.Text = "ACTIVAR"
+activateBtn.Font = THEME.FontMain
+activateBtn.TextSize = 18
+activateBtn.AutoButtonColor = false
+activateBtn.BorderSizePixel = 0
+activateBtn.Visible = true
+activateBtn.Parent = screenGui
+
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 8)
+btnCorner.Parent = activateBtn
+
+local btnGradient = Instance.new("UIGradient")
+btnGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, THEME.AccentDark),
+    ColorSequenceKeypoint.new(1, THEME.Accent),
+})
+btnGradient.Rotation = 90
+btnGradient.Parent = activateBtn
+
+local btnStroke = Instance.new("UIStroke")
+btnStroke.Color = THEME.Accent
+btnStroke.Thickness = 1.5
+btnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+btnStroke.Parent = activateBtn
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 400, 0, 90)
+mainFrame.Position = UDim2.new(0.5, -200, 0.8, -45)
+mainFrame.BackgroundColor3 = THEME.Background
+mainFrame.BackgroundTransparency = 0.05
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = false
+mainFrame.ClipsDescendants = true
+mainFrame.Parent = screenGui
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 12)
+mainCorner.Parent = mainFrame
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = THEME.Accent
+mainStroke.Thickness = 1.5
+mainStroke.Transparency = 0
+mainStroke.Parent = mainFrame
+
+local dragging = false
+local dragInput, mousePos, framePos
+local isDraggable = false
+
+local function onInputBegan(input)
+    if not isDraggable then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        mousePos = input.Position
+        framePos = mainFrame.Position
+        local connection
+        connection = input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+                connection:Disconnect()
+            end
+        end)
+    end
+end
+
+local function onInputChanged(input)
+    if not isDraggable then return end
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end
+
+mainFrame.InputBegan:Connect(onInputBegan)
+mainFrame.InputChanged:Connect(onInputChanged)
+
+UserInputService.InputChanged:Connect(function(input)
+    if not isDraggable then return end
+    if input == dragInput and dragging then
+        local delta = input.Position - mousePos
+        mainFrame.Position = UDim2.new(
+            framePos.X.Scale, framePos.X.Offset + delta.X,
+            framePos.Y.Scale, framePos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+local isRunning = false
+
+task.spawn(function()
+    local hue = 0
+    while true do
+        hue = (hue + 0.3) % 360
+        local c1 = Color3.fromHSV(hue / 360, 0.8, 1)
+        local c2 = Color3.fromHSV(((hue + 60) % 360) / 360, 0.8, 1)
+        mainStroke.Color = c1
+        btnStroke.Color = c2
+        task.wait(0.016)
+    end
+end)
+
+activateBtn.MouseButton1Click:Connect(function()
+    if isRunning then return end
+    isRunning = true
+
+    TweenService:Create(activateBtn, TweenInfo.new(0.3), {BackgroundTransparency = 1, TextTransparency = 1}):Play()
+    task.wait(0.3)
+    activateBtn.Visible = false
+
+    mainFrame.Visible = true
+
+    local imgContainer = Instance.new("Frame")
+    imgContainer.Size = UDim2.new(0, 60, 0, 60)
+    imgContainer.Position = UDim2.new(0, 15, 0.5, -30)
+    imgContainer.BackgroundTransparency = 1
+    imgContainer.Parent = mainFrame
+
+    local imgLabel = Instance.new("ImageLabel")
+    imgLabel.Size = UDim2.new(1, 0, 1, 0)
+    imgLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+    imgLabel.Position = UDim2.new(0.5, 0, 0.5, 0)
+    imgLabel.BackgroundTransparency = 1
+    imgLabel.ScaleType = Enum.ScaleType.Fit
+    imgLabel.Parent = imgContainer
+
+    local imgCorner = Instance.new("UICorner")
+    imgCorner.CornerRadius = UDim.new(1, 0)
+    imgCorner.Parent = imgLabel
+
+    local imgStroke = Instance.new("UIStroke")
+    imgStroke.Color = THEME.Accent
+    imgStroke.Thickness = 2
+    imgStroke.Parent = imgLabel
+
+    task.spawn(function()
+        local asset = downloadImage()
+        if asset then
+            imgLabel.Image = asset
+        end
+    end)
+
+    local textBlock = Instance.new("Frame")
+    textBlock.Size = UDim2.new(1, -90, 1, 0)
+    textBlock.Position = UDim2.new(0, 85, 0, 0)
+    textBlock.BackgroundTransparency = 1
+    textBlock.Parent = mainFrame
+
+    local loadingText = Instance.new("TextLabel")
+    loadingText.Name = "LoadingText"
+    loadingText.Size = UDim2.new(1, 0, 0, 26)
+    loadingText.Position = UDim2.new(0, 0, 0, 10)
+    loadingText.BackgroundTransparency = 1
+    loadingText.TextColor3 = THEME.Text
+    loadingText.Font = THEME.FontMain
+    loadingText.TextSize = 13
+    loadingText.TextXAlignment = Enum.TextXAlignment.Left
+    loadingText.Text = "Cargando..."
+    loadingText.Parent = textBlock
+
+    local helpText = Instance.new("TextLabel")
+    helpText.Name = "HelpText"
+    helpText.Size = UDim2.new(1, 0, 0, 16)
+    helpText.Position = UDim2.new(0, 0, 0, 36)
+    helpText.BackgroundTransparency = 1
+    helpText.TextColor3 = THEME.SubText
+    helpText.Font = THEME.FontBody
+    helpText.TextSize = 11
+    helpText.TextXAlignment = Enum.TextXAlignment.Left
+    helpText.Text = "Atorado aqui? Unete por ayuda: " .. DISCORD_LINK
+    helpText.Parent = textBlock
+
+    local progressBg = Instance.new("Frame")
+    progressBg.Name = "ProgressBg"
+    progressBg.Size = UDim2.new(1, 0, 0, 6)
+    progressBg.Position = UDim2.new(0, 0, 1, -18)
+    progressBg.BackgroundColor3 = Color3.fromRGB(40, 42, 54)
+    progressBg.BorderSizePixel = 0
+    progressBg.Parent = textBlock
+
+    local progressBgCorner = Instance.new("UICorner")
+    progressBgCorner.CornerRadius = UDim.new(0, 5)
+    progressBgCorner.Parent = progressBg
+
+    local progressBar = Instance.new("Frame")
+    progressBar.Name = "ProgressBar"
+    progressBar.Size = UDim2.new(0, 0, 1, 0)
+    progressBar.BackgroundColor3 = THEME.Accent
+    progressBar.BorderSizePixel = 0
+    progressBar.Parent = progressBg
+
+    local progressBarCorner = Instance.new("UICorner")
+    progressBarCorner.CornerRadius = UDim.new(0, 5)
+    progressBarCorner.Parent = progressBar
+
+    local progressGradient = Instance.new("UIGradient")
+    progressGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, THEME.AccentDark),
+        ColorSequenceKeypoint.new(1, THEME.Accent),
+    })
+    progressGradient.Parent = progressBar
+
+    isDraggable = true
+
+    pcall(function()
+        setclipboard(DISCORD_LINK)
+    end)
+
+    task.spawn(function()
+        local angle = 0
+        while imgLabel.Parent do
+            angle = (angle + 2) % 360
+            imgLabel.Rotation = angle
+            RunService.Heartbeat:Wait()
+        end
+    end)
+
+    task.spawn(function()
+        local hue = 0
+        while progressBar.Parent do
+            hue = (hue + 1) % 360
+            local c1 = Color3.fromHSV(hue / 360, 0.7, 1)
+            local c2 = Color3.fromHSV(((hue + 40) % 360) / 360, 0.7, 1)
+            progressGradient.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, c1),
+                ColorSequenceKeypoint.new(1, c2),
+            })
+            task.wait(0.016)
+        end
+    end)
+
+    task.spawn(function()
+        while progressBar.Parent do
+            TweenService:Create(progressBar, TweenInfo.new(2, Enum.EasingStyle.Linear), {
+                Size = UDim2.new(1, 0, 1, 0)
+            }):Play()
+            task.wait(2)
+            progressBar.Size = UDim2.new(0, 0, 1, 0)
+            task.wait(0.1)
+        end
+    end)
+
+    task.spawn(function()
+        local dots = ""
+        while loadingText.Parent do
+            dots = dots .. "."
+            if #dots > 3 then dots = "" end
+            loadingText.Text = "Cargando" .. dots
+            task.wait(0.5)
+        end
+    end)
+end)
